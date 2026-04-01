@@ -356,7 +356,11 @@ class LooopDenkiApiClient:
             "tomorrow_min": min_price,
             "tomorrow_max": max_price,
             "tomorrow_min_time": slot_to_time_range(min_idx),
+            "tomorrow_min_time_start": slot_to_time_range(min_idx)["start"],
+            "tomorrow_min_time_end": slot_to_time_range(min_idx)["end"],
             "tomorrow_max_time": slot_to_time_range(max_idx),
+            "tomorrow_max_time_start": slot_to_time_range(max_idx)["start"],
+            "tomorrow_max_time_end": slot_to_time_range(max_idx)["end"],
             "data_available": True,
         }
 
@@ -415,6 +419,13 @@ class LooopDenkiApiClient:
             minute_end = 59 if slot % 2 == 1 else 29
             return f"{hour}:{minute_start:02d}~{hour}:{minute_end:02d}"
 
+        def slot_to_start_end(slot: int) -> tuple[str, str]:
+            """Convert a 0-based 30-minute slot to (start, end) HH:MM strings."""
+            hour = slot // 2
+            minute_start = 30 if slot % 2 == 1 else 0
+            minute_end = 59 if slot % 2 == 1 else 29
+            return f"{hour:02d}:{minute_start:02d}", f"{hour:02d}:{minute_end:02d}"
+
         # Price volatility
         variance = sum((p - avg_price) ** 2 for p in effective_prices) / len(
             effective_prices
@@ -438,6 +449,9 @@ class LooopDenkiApiClient:
                 minutes_until_next_cheap = (slot - current_slot) * 30
                 break
 
+        min_start, min_end = slot_to_start_end(min_slot)
+        max_start, max_end = slot_to_start_end(max_slot)
+
         return {
             "data_available": True,
             "today_average": avg_price,
@@ -445,8 +459,12 @@ class LooopDenkiApiClient:
             "today_max": max_price,
             "today_min_slot": min_slot,
             "today_min_time": slot_to_time(min_slot),
+            "today_min_time_start": min_start,
+            "today_min_time_end": min_end,
             "today_max_slot": max_slot,
             "today_max_time": slot_to_time(max_slot),
+            "today_max_time_start": max_start,
+            "today_max_time_end": max_end,
             "all_prices": effective_prices,
             "cheapest_slots": cheapest_slots,
             "cheapest_times": cheapest_times,

@@ -35,8 +35,16 @@ from .const import (
     ATTR_TODAY_ALL_PRICES,
     ATTR_TODAY_MAX_SLOT,
     ATTR_TODAY_MAX_TIME,
+    ATTR_TODAY_MAX_TIME_END,
+    ATTR_TODAY_MAX_TIME_START,
     ATTR_TODAY_MIN_SLOT,
     ATTR_TODAY_MIN_TIME,
+    ATTR_TODAY_MIN_TIME_END,
+    ATTR_TODAY_MIN_TIME_START,
+    ATTR_TOMORROW_MAX_TIME_END,
+    ATTR_TOMORROW_MAX_TIME_START,
+    ATTR_TOMORROW_MIN_TIME_END,
+    ATTR_TOMORROW_MIN_TIME_START,
     DOMAIN,
 )
 from .coordinator import LooopDenkiCoordinator
@@ -127,7 +135,17 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
             else None
         ),
         extra_fn=lambda sensor: (
-            sensor.coordinator.data.get("tomorrow_info", {}).get("tomorrow_min_time")
+            {
+                **sensor.coordinator.data.get("tomorrow_info", {}).get(
+                    "tomorrow_min_time", {}
+                ),
+                ATTR_TOMORROW_MIN_TIME_START: sensor.coordinator.data.get(
+                    "tomorrow_info", {}
+                ).get("tomorrow_min_time_start"),
+                ATTR_TOMORROW_MIN_TIME_END: sensor.coordinator.data.get(
+                    "tomorrow_info", {}
+                ).get("tomorrow_min_time_end"),
+            }
             if sensor.coordinator.data and sensor.coordinator.data.get("tomorrow_info")
             else None
         ),
@@ -145,7 +163,17 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
             else None
         ),
         extra_fn=lambda sensor: (
-            sensor.coordinator.data.get("tomorrow_info", {}).get("tomorrow_max_time")
+            {
+                **sensor.coordinator.data.get("tomorrow_info", {}).get(
+                    "tomorrow_max_time", {}
+                ),
+                ATTR_TOMORROW_MAX_TIME_START: sensor.coordinator.data.get(
+                    "tomorrow_info", {}
+                ).get("tomorrow_max_time_start"),
+                ATTR_TOMORROW_MAX_TIME_END: sensor.coordinator.data.get(
+                    "tomorrow_info", {}
+                ).get("tomorrow_max_time_end"),
+            }
             if sensor.coordinator.data and sensor.coordinator.data.get("tomorrow_info")
             else None
         ),
@@ -192,6 +220,12 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
                 ATTR_TODAY_MIN_TIME: sensor.coordinator.data.get("today_stats", {}).get(
                     "today_min_time"
                 ),
+                ATTR_TODAY_MIN_TIME_START: sensor.coordinator.data.get(
+                    "today_stats", {}
+                ).get("today_min_time_start"),
+                ATTR_TODAY_MIN_TIME_END: sensor.coordinator.data.get(
+                    "today_stats", {}
+                ).get("today_min_time_end"),
             }
             if sensor.coordinator.data and sensor.coordinator.data.get("today_stats")
             else None
@@ -217,6 +251,12 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
                 ATTR_TODAY_MAX_TIME: sensor.coordinator.data.get("today_stats", {}).get(
                     "today_max_time"
                 ),
+                ATTR_TODAY_MAX_TIME_START: sensor.coordinator.data.get(
+                    "today_stats", {}
+                ).get("today_max_time_start"),
+                ATTR_TODAY_MAX_TIME_END: sensor.coordinator.data.get(
+                    "today_stats", {}
+                ).get("today_max_time_end"),
             }
             if sensor.coordinator.data and sensor.coordinator.data.get("today_stats")
             else None
