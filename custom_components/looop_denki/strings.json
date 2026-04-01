@@ -33,6 +33,18 @@
       },
       "tomorrow_max_price": {
         "name": "Tomorrow Maximum Power Price"
+      },
+      "today_average_price": {
+        "name": "Today Average Power Price"
+      },
+      "today_min_price": {
+        "name": "Today Minimum Power Price"
+      },
+      "today_max_price": {
+        "name": "Today Maximum Power Price"
+      },
+      "cheapest_hours_today": {
+        "name": "Cheapest Hours Today"
       }
     }
   }

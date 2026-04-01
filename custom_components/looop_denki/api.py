@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -357,6 +358,104 @@ class LooopDenkiApiClient:
             "tomorrow_min_time": slot_to_time_range(min_idx),
             "tomorrow_max_time": slot_to_time_range(max_idx),
             "data_available": True,
+        }
+
+    def get_today_stats(self, price_data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Calculate today's price statistics from key '1'.
+
+        Uses text-based prices where available, falls back to price_data[].
+
+        Returns:
+            Dict with average, min, max, cheapest hours, and volatility info.
+            Returns empty dict if today's data is unavailable.
+
+        """
+        today_data = price_data.get("1", {})
+        if not today_data:
+            return {}
+
+        price_list = today_data.get("price_data", [])
+        text_dict = today_data.get("text", {})
+        timelist = price_data.get("timelist", [])
+
+        if not isinstance(price_list, list) or not price_list:
+            return {}
+
+        # Build effective prices (text-based when available, else price_data)
+        effective_prices: list[float] = []
+        for i in range(len(price_list)):
+            text_slot_key = str(i + 1)  # text dict is 1-based
+            if (
+                isinstance(text_dict, dict)
+                and text_slot_key in text_dict
+                and isinstance(text_dict[text_slot_key], dict)
+            ):
+                text_price = text_dict[text_slot_key].get("price")
+                if text_price is not None:
+                    effective_prices.append(float(text_price))
+                    continue
+            effective_prices.append(float(price_list[i]))
+
+        if not effective_prices:
+            return {}
+
+        avg_price = round(sum(effective_prices) / len(effective_prices), 2)
+        min_price = min(effective_prices)
+        max_price = max(effective_prices)
+        min_slot = effective_prices.index(min_price)  # 0-based
+        max_slot = effective_prices.index(max_price)  # 0-based
+
+        def slot_to_time(slot: int) -> str:
+            """Convert a 0-based 30-minute slot index to a friendly time string."""
+            if timelist and slot < len(timelist):
+                return str(timelist[slot])
+            hour = slot // 2
+            minute_start = 30 if slot % 2 == 1 else 0
+            minute_end = 59 if slot % 2 == 1 else 29
+            return f"{hour}:{minute_start:02d}~{hour}:{minute_end:02d}"
+
+        # Price volatility
+        variance = sum((p - avg_price) ** 2 for p in effective_prices) / len(
+            effective_prices
+        )
+        std_dev = round(math.sqrt(variance), 2)
+        price_range = round(max_price - min_price, 2)
+
+        # Cheapest hours: slots whose price is below (average - 10%)
+        threshold = round(avg_price * 0.9, 2)
+        cheapest_slots = [i for i, p in enumerate(effective_prices) if p < threshold]
+        cheapest_times = [slot_to_time(s) for s in cheapest_slots]
+
+        # Minutes until the next upcoming cheap slot
+        jst = timezone(timedelta(hours=9))
+        current_time = datetime.now(jst)
+        current_slot = current_time.hour * 2 + (1 if current_time.minute >= 30 else 0)
+
+        minutes_until_next_cheap: int | None = None
+        for slot in cheapest_slots:
+            if slot > current_slot:
+                minutes_until_next_cheap = (slot - current_slot) * 30
+                break
+
+        return {
+            "data_available": True,
+            "today_average": avg_price,
+            "today_min": min_price,
+            "today_max": max_price,
+            "today_min_slot": min_slot,
+            "today_min_time": slot_to_time(min_slot),
+            "today_max_slot": max_slot,
+            "today_max_time": slot_to_time(max_slot),
+            "all_prices": effective_prices,
+            "cheapest_slots": cheapest_slots,
+            "cheapest_times": cheapest_times,
+            "cheapest_count": len(cheapest_slots),
+            "cheapest_threshold": threshold,
+            "avg_price": avg_price,
+            "minutes_until_next_cheap": minutes_until_next_cheap,
+            "std_dev": std_dev,
+            "price_range": price_range,
         }
 
     def get_historical_data(

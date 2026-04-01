@@ -36,6 +36,7 @@ class LooopDenkiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             current_info = self.client.get_current_price_info(raw_data)
             next_info = self.client.get_next_price_info(raw_data)
             tomorrow_info = self.client.get_tomorrow_forecast_info(raw_data)
+            today_stats = self.client.get_today_stats(raw_data)
             historical_data = self.client.get_historical_data(raw_data)
 
             return {
@@ -43,6 +44,7 @@ class LooopDenkiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "current_info": current_info,
                 "next_info": next_info,
                 "tomorrow_info": tomorrow_info,
+                "today_stats": today_stats,
                 "historical_data": historical_data,
             }
         except LooopDenkiApiError as err:
