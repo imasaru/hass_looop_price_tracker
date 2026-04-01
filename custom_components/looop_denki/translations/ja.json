@@ -33,6 +33,18 @@
       },
       "tomorrow_max_price": {
         "name": "明日の最高電力料金"
+      },
+      "today_average_price": {
+        "name": "今日の平均電力料金"
+      },
+      "today_min_price": {
+        "name": "今日の最安電力料金"
+      },
+      "today_max_price": {
+        "name": "今日の最高電力料金"
+      },
+      "cheapest_hours_today": {
+        "name": "今日の安い時間帯"
       }
     }
   }
