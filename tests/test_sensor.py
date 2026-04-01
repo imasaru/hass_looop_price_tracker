@@ -126,7 +126,11 @@ async def test_sensor_state(hass: HomeAssistant, mock_api_data: dict[str, Any]) 
                 "tomorrow_min": 8.7,
                 "tomorrow_max": 20.2,
                 "tomorrow_min_time": {"start": "03:00", "end": "03:29"},
+                "tomorrow_min_time_start": "03:00",
+                "tomorrow_min_time_end": "03:29",
                 "tomorrow_max_time": {"start": "19:00", "end": "19:29"},
+                "tomorrow_max_time_start": "19:00",
+                "tomorrow_max_time_end": "19:29",
             },
         ),
     ):
@@ -162,6 +166,8 @@ async def test_sensor_state(hass: HomeAssistant, mock_api_data: dict[str, Any]) 
     assert tomorrow_min_state.state == "8.7"
     assert tomorrow_min_state.attributes["start"] == "03:00"
     assert tomorrow_min_state.attributes["end"] == "03:29"
+    assert tomorrow_min_state.attributes["tomorrow_min_time_start"] == "03:00"
+    assert tomorrow_min_state.attributes["tomorrow_min_time_end"] == "03:29"
 
     # Test tomorrow max price sensor
     tomorrow_max_state = hass.states.get("sensor.tomorrow_maximum_price")
@@ -169,6 +175,8 @@ async def test_sensor_state(hass: HomeAssistant, mock_api_data: dict[str, Any]) 
     assert tomorrow_max_state.state == "20.2"
     assert tomorrow_max_state.attributes["start"] == "19:00"
     assert tomorrow_max_state.attributes["end"] == "19:29"
+    assert tomorrow_max_state.attributes["tomorrow_max_time_start"] == "19:00"
+    assert tomorrow_max_state.attributes["tomorrow_max_time_end"] == "19:29"
 
 
 async def test_sensor_unavailable_when_no_data(hass: HomeAssistant) -> None:
@@ -249,12 +257,16 @@ async def test_today_stats_sensors(
     assert today_min_state.state == "8.7"
     assert today_min_state.attributes["min_slot"] == 2
     assert today_min_state.attributes["min_time"] == "1:00~1:29"
+    assert today_min_state.attributes["min_time_start"] == "01:00"
+    assert today_min_state.attributes["min_time_end"] == "01:29"
 
     today_max_state = hass.states.get("sensor.today_maximum_price")
     assert today_max_state is not None
     assert today_max_state.state == "15.2"
     assert today_max_state.attributes["max_slot"] == 3
     assert today_max_state.attributes["max_time"] == "1:30~1:59"
+    assert today_max_state.attributes["max_time_start"] == "01:30"
+    assert today_max_state.attributes["max_time_end"] == "01:59"
 
     cheapest_state = hass.states.get("sensor.cheapest_hours_today")
     assert cheapest_state is not None

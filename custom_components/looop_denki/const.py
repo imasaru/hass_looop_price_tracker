@@ -20,8 +20,18 @@ ATTR_MINUTE_RANGE = "minute_range"
 ATTR_TODAY_ALL_PRICES = "all_prices"
 ATTR_TODAY_MIN_SLOT = "min_slot"
 ATTR_TODAY_MIN_TIME = "min_time"
+ATTR_TODAY_MIN_TIME_START = "min_time_start"
+ATTR_TODAY_MIN_TIME_END = "min_time_end"
 ATTR_TODAY_MAX_SLOT = "max_slot"
 ATTR_TODAY_MAX_TIME = "max_time"
+ATTR_TODAY_MAX_TIME_START = "max_time_start"
+ATTR_TODAY_MAX_TIME_END = "max_time_end"
+
+# Sensor attributes – tomorrow stats start/end times
+ATTR_TOMORROW_MIN_TIME_START = "tomorrow_min_time_start"
+ATTR_TOMORROW_MIN_TIME_END = "tomorrow_min_time_end"
+ATTR_TOMORROW_MAX_TIME_START = "tomorrow_max_time_start"
+ATTR_TOMORROW_MAX_TIME_END = "tomorrow_max_time_end"
 
 # Sensor attributes – cheapest hours today
 ATTR_CHEAPEST_SLOTS = "cheapest_slots"
