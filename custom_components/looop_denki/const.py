@@ -15,6 +15,12 @@ ATTR_STATUS = "status"
 ATTR_TIME_SLOT = "time_slot"
 ATTR_HOUR = "hour"
 ATTR_MINUTE_RANGE = "minute_range"
+ATTR_CURRENT_START_TIME = "current_start_time"
+ATTR_CURRENT_END_TIME = "current_end_time"
+
+# Sensor attributes – next price
+ATTR_NEXT_START_TIME = "next_start_time"
+ATTR_NEXT_END_TIME = "next_end_time"
 
 # Sensor attributes – today stats
 ATTR_TODAY_ALL_PRICES = "all_prices"
