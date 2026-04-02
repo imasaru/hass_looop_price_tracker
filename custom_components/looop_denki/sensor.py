@@ -27,6 +27,12 @@ from .const import (
     ATTR_CURRENT_LEVEL,
     ATTR_CURRENT_START_TIME,
     ATTR_CURRENT_TEXT,
+    ATTR_EXPENSIVE_COUNT,
+    ATTR_EXPENSIVE_SLOTS,
+    ATTR_EXPENSIVE_THRESHOLD,
+    ATTR_EXPENSIVE_TIMES,
+    ATTR_FIRST_EXPENSIVE_SLOT,
+    ATTR_FIRST_EXPENSIVE_TIME,
     ATTR_HOUR,
     ATTR_MINUTE_RANGE,
     ATTR_MINUTES_UNTIL_NEXT_CHEAP,
@@ -315,6 +321,46 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
             else None
         ),
     ),
+    LooopDenkiSensorEntityDescription(
+        key="expensive_hours_today",
+        translation_key="expensive_hours_today",
+        name="Expensive Hours Today",
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=None,
+        value_fn=lambda sensor: (
+            sensor.coordinator.data.get("today_stats", {}).get("expensive_count")
+            if sensor.coordinator.data
+            else None
+        ),
+        extra_fn=lambda sensor: (
+            {
+                ATTR_EXPENSIVE_SLOTS: sensor.coordinator.data.get(
+                    "today_stats", {}
+                ).get("expensive_slots"),
+                ATTR_EXPENSIVE_TIMES: sensor.coordinator.data.get(
+                    "today_stats", {}
+                ).get("expensive_times"),
+                ATTR_EXPENSIVE_COUNT: sensor.coordinator.data.get(
+                    "today_stats", {}
+                ).get("expensive_count"),
+                ATTR_EXPENSIVE_THRESHOLD: sensor.coordinator.data.get(
+                    "today_stats", {}
+                ).get("expensive_threshold"),
+                ATTR_AVG_PRICE: sensor.coordinator.data.get("today_stats", {}).get(
+                    "avg_price"
+                ),
+                ATTR_FIRST_EXPENSIVE_SLOT: sensor.coordinator.data.get(
+                    "today_stats", {}
+                ).get("first_expensive_slot"),
+                ATTR_FIRST_EXPENSIVE_TIME: sensor.coordinator.data.get(
+                    "today_stats", {}
+                ).get("first_expensive_time"),
+            }
+            if sensor.coordinator.data and sensor.coordinator.data.get("today_stats")
+            else None
+        ),
+    ),
 )
 
 
@@ -420,6 +466,7 @@ class LooopDenkiSensor(CoordinatorEntity[LooopDenkiCoordinator], SensorEntity):
             "today_min",
             "today_max",
             "cheapest_hours_today",
+            "expensive_hours_today",
         }:
             today_stats = self.coordinator.data.get("today_stats", {})
             return today_stats.get("data_available", False)

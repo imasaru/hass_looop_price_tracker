@@ -45,6 +45,9 @@
       },
       "cheapest_hours_today": {
         "name": "Cheapest Hours Today"
+      },
+      "expensive_hours_today": {
+        "name": "Expensive Hours Today"
       }
     }
   }

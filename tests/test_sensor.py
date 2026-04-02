@@ -326,7 +326,72 @@ async def test_today_stats_sensors_unavailable_when_no_today_data(
         "sensor.today_minimum_price",
         "sensor.today_maximum_price",
         "sensor.cheapest_hours_today",
+        "sensor.expensive_hours_today",
     ):
         state = hass.states.get(entity_id)
         assert state is not None, f"{entity_id} not registered"
         assert state.state == STATE_UNAVAILABLE, f"{entity_id} should be unavailable"
+
+
+async def test_expensive_hours_today_sensor(
+    hass: HomeAssistant, mock_api_data: dict[str, Any]
+) -> None:
+    """Test expensive hours today sensor state and attributes."""
+    with patch(
+        "custom_components.looop_denki.api.LooopDenkiApiClient.async_get_prices",
+        return_value=mock_api_data,
+    ):
+        await setup_integration(hass)
+
+    # Expected values from mock data: prices [10.5, 12.3, 8.7, 15.2] * 12 (48 total)
+    # Pattern repeats 12×, so avg = (10.5+12.3+8.7+15.2)/4 = 11.675 → rounded to 11.67
+    # expensive_threshold = 11.675 * 1.1 = 12.8425 → rounded to 12.84
+    # expensive slots (0-based): indices where price >= 12.84 → only 15.2 qualifies
+    # 15.2 appears at slots 3,7,11,15,19,23,27,31,35,39,43,47 → 12 slots
+
+    expensive_state = hass.states.get("sensor.expensive_hours_today")
+    assert expensive_state is not None
+    assert expensive_state.state == "12"
+
+    attrs = expensive_state.attributes
+    assert attrs["expensive_count"] == 12
+    assert 3 in attrs["expensive_slots"]
+    assert "1:30~1:59" in attrs["expensive_times"]
+    assert attrs["avg_price"] == 11.67
+    assert attrs["threshold_used"] == 12.84
+    assert attrs["first_expensive_slot"] == 3
+    assert attrs["first_expensive_time"] == "1:30~1:59"
+
+
+async def test_expensive_hours_today_sensor_no_expensive_slots(
+    hass: HomeAssistant,
+) -> None:
+    """Test expensive_hours_today sensor when all prices are equal (none expensive)."""
+    flat_api_data = {
+        "0": {
+            "price_data": [10.0] * 48,
+            "level": [0] * 48,
+            "text": {str(i + 1): {"price": 10.0, "level": 0} for i in range(48)},
+        },
+        "1": {
+            "price_data": [10.0] * 48,
+            "level": [0] * 48,
+            "text": {str(i + 1): {"price": 10.0, "level": 0} for i in range(48)},
+        },
+    }
+    with patch(
+        "custom_components.looop_denki.api.LooopDenkiApiClient.async_get_prices",
+        return_value=flat_api_data,
+    ):
+        await setup_integration(hass)
+
+    expensive_state = hass.states.get("sensor.expensive_hours_today")
+    assert expensive_state is not None
+    assert expensive_state.state == "0"
+
+    attrs = expensive_state.attributes
+    assert attrs["expensive_count"] == 0
+    assert attrs["expensive_slots"] == []
+    assert attrs["expensive_times"] == []
+    assert attrs["first_expensive_slot"] is None
+    assert attrs["first_expensive_time"] is None

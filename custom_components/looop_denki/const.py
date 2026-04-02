@@ -48,3 +48,11 @@ ATTR_AVG_PRICE = "avg_price"
 ATTR_MINUTES_UNTIL_NEXT_CHEAP = "minutes_until_next_cheap"
 ATTR_STD_DEV = "std_dev"
 ATTR_PRICE_RANGE = "price_range"
+
+# Sensor attributes – expensive hours today
+ATTR_EXPENSIVE_SLOTS = "expensive_slots"
+ATTR_EXPENSIVE_TIMES = "expensive_times"
+ATTR_EXPENSIVE_COUNT = "expensive_count"
+ATTR_EXPENSIVE_THRESHOLD = "threshold_used"
+ATTR_FIRST_EXPENSIVE_SLOT = "first_expensive_slot"
+ATTR_FIRST_EXPENSIVE_TIME = "first_expensive_time"
