@@ -45,6 +45,9 @@
       },
       "cheapest_hours_today": {
         "name": "今日の安い時間帯"
+      },
+      "expensive_hours_today": {
+        "name": "今日の高い時間帯"
       }
     }
   }

@@ -448,6 +448,22 @@ class LooopDenkiApiClient:
                 minutes_until_next_cheap = (slot - current_slot) * 30
                 break
 
+        # Expensive hours: slots at or above 110% of the average (avg × 1.1)
+        expensive_threshold = round(avg_price * 1.1, 2)
+        expensive_slots = [
+            i for i, p in enumerate(effective_prices) if p >= expensive_threshold
+        ]
+        expensive_times = [slot_to_time(s) for s in expensive_slots]
+
+        first_expensive_slot: int | None = (
+            expensive_slots[0] if expensive_slots else None
+        )
+        first_expensive_time: str | None = (
+            slot_to_time(first_expensive_slot)
+            if first_expensive_slot is not None
+            else None
+        )
+
         min_start, min_end = self._slot_to_start_end(min_slot)
         max_start, max_end = self._slot_to_start_end(max_slot)
 
@@ -473,6 +489,12 @@ class LooopDenkiApiClient:
             "minutes_until_next_cheap": minutes_until_next_cheap,
             "std_dev": std_dev,
             "price_range": price_range,
+            "expensive_slots": expensive_slots,
+            "expensive_times": expensive_times,
+            "expensive_count": len(expensive_slots),
+            "expensive_threshold": expensive_threshold,
+            "first_expensive_slot": first_expensive_slot,
+            "first_expensive_time": first_expensive_time,
         }
 
     def get_historical_data(
