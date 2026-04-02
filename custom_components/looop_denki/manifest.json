@@ -2,18 +2,19 @@
   "domain": "looop_denki",
   "name": "Looop Denki",
   "codeowners": [
-    "@pikatenor"
+    "@pikatenor",
+    "@imasaru"
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/pikatenor/hass_looop_price_tracker",
+  "documentation": "https://github.com/imasaru/hass_looop_price_tracker",
   "homekit": {},
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/pikatenor/hass_looop_price_tracker/issues",
+  "issue_tracker": "https://github.com/imasaru/hass_looop_price_tracker/issues",
   "requirements": [
     "aiohttp>=3.8.0"
   ],
   "ssdp": [],
-  "version": "0.4.0",
+  "version": "0.4.1",
   "zeroconf": []
 }
