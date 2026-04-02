@@ -23,11 +23,15 @@ from .const import (
     ATTR_CHEAPEST_SLOTS,
     ATTR_CHEAPEST_THRESHOLD,
     ATTR_CHEAPEST_TIMES,
+    ATTR_CURRENT_END_TIME,
     ATTR_CURRENT_LEVEL,
+    ATTR_CURRENT_START_TIME,
     ATTR_CURRENT_TEXT,
     ATTR_HOUR,
     ATTR_MINUTE_RANGE,
     ATTR_MINUTES_UNTIL_NEXT_CHEAP,
+    ATTR_NEXT_END_TIME,
+    ATTR_NEXT_START_TIME,
     ATTR_PRICE_RANGE,
     ATTR_STATUS,
     ATTR_STD_DEV,
@@ -95,6 +99,12 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
                 "is_tomorrow": sensor.coordinator.data.get("next_info", {}).get(
                     "is_tomorrow", False
                 ),
+                ATTR_NEXT_START_TIME: sensor.coordinator.data.get(
+                    "next_info", {}
+                ).get("next_start_time"),
+                ATTR_NEXT_END_TIME: sensor.coordinator.data.get(
+                    "next_info", {}
+                ).get("next_end_time"),
             }
             if sensor.coordinator.data and sensor.coordinator.data.get("next_info")
             else None
@@ -378,6 +388,8 @@ class LooopDenkiSensor(CoordinatorEntity[LooopDenkiCoordinator], SensorEntity):
                         ATTR_TIME_SLOT: current_info.get("time_slot"),
                         ATTR_HOUR: current_info.get("hour"),
                         ATTR_MINUTE_RANGE: current_info.get("minute_range"),
+                        ATTR_CURRENT_START_TIME: current_info.get("current_start_time"),
+                        ATTR_CURRENT_END_TIME: current_info.get("current_end_time"),
                     }
                 )
 

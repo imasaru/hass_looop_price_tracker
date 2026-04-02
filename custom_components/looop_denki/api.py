@@ -203,6 +203,8 @@ class LooopDenkiApiClient:
                 current_level, current_text_price or current_price
             )
 
+            # Legacy time attributes kept for backward compatibility
+            current_start, current_end = self._slot_to_start_end(current_30min_slot)
             return {
                 "current_price": current_text_price or current_price,
                 "current_level": current_level,
@@ -211,6 +213,8 @@ class LooopDenkiApiClient:
                 "time_slot": current_30min_slot,
                 "hour": current_hour,
                 "minute_range": "30-59" if current_time.minute >= 30 else "00-29",
+                "current_start_time": current_start,
+                "current_end_time": current_end,
             }
 
         return {}
@@ -258,6 +262,7 @@ class LooopDenkiApiClient:
                 ):
                     next_text_price = text_dict[text_slot_key].get("price")
 
+                next_start, next_end = self._slot_to_start_end(next_30min_slot)
                 return {
                     "next_price": next_text_price or next_price,
                     "next_level": next_level,
@@ -265,6 +270,8 @@ class LooopDenkiApiClient:
                         next_level, next_text_price or next_price
                     ),
                     "next_time_slot": next_30min_slot,
+                    "next_start_time": next_start,
+                    "next_end_time": next_end,
                 }
         else:
             # Next slot is tomorrow (slot 0)
@@ -285,6 +292,7 @@ class LooopDenkiApiClient:
                 if "1" in text_dict and isinstance(text_dict["1"], dict):
                     next_text_price = text_dict["1"].get("price")
 
+                next_start, next_end = self._slot_to_start_end(0)
                 return {
                     "next_price": next_text_price or next_price,
                     "next_level": next_level,
@@ -293,6 +301,8 @@ class LooopDenkiApiClient:
                     ),
                     "next_time_slot": 0,
                     "is_tomorrow": True,
+                    "next_start_time": next_start,
+                    "next_end_time": next_end,
                 }
 
         return {}
@@ -341,26 +351,22 @@ class LooopDenkiApiClient:
         min_idx = effective_prices.index(min_price)
         max_idx = effective_prices.index(max_price)
 
-        # Convert slot index to time range
-        def slot_to_time_range(slot: int) -> dict[str, str]:
-            hour = slot // 2
-            minute_start = 30 if slot % 2 == 1 else 0
-            minute_end = 29 if slot % 2 == 0 else 59
-            return {
-                "start": f"{hour:02d}:{minute_start:02d}",
-                "end": f"{hour:02d}:{minute_end:02d}",
-            }
-
         return {
             "tomorrow_average": round(avg_price, 2),
             "tomorrow_min": min_price,
             "tomorrow_max": max_price,
-            "tomorrow_min_time": slot_to_time_range(min_idx),
-            "tomorrow_min_time_start": slot_to_time_range(min_idx)["start"],
-            "tomorrow_min_time_end": slot_to_time_range(min_idx)["end"],
-            "tomorrow_max_time": slot_to_time_range(max_idx),
-            "tomorrow_max_time_start": slot_to_time_range(max_idx)["start"],
-            "tomorrow_max_time_end": slot_to_time_range(max_idx)["end"],
+            "tomorrow_min_time": {
+                "start": self._slot_to_start_end(min_idx)[0],
+                "end": self._slot_to_start_end(min_idx)[1],
+            },
+            "tomorrow_min_time_start": self._slot_to_start_end(min_idx)[0],
+            "tomorrow_min_time_end": self._slot_to_start_end(min_idx)[1],
+            "tomorrow_max_time": {
+                "start": self._slot_to_start_end(max_idx)[0],
+                "end": self._slot_to_start_end(max_idx)[1],
+            },
+            "tomorrow_max_time_start": self._slot_to_start_end(max_idx)[0],
+            "tomorrow_max_time_end": self._slot_to_start_end(max_idx)[1],
             "data_available": True,
         }
 
@@ -419,13 +425,6 @@ class LooopDenkiApiClient:
             minute_end = 59 if slot % 2 == 1 else 29
             return f"{hour}:{minute_start:02d}~{hour}:{minute_end:02d}"
 
-        def slot_to_start_end(slot: int) -> tuple[str, str]:
-            """Convert a 0-based 30-minute slot to (start, end) HH:MM strings."""
-            hour = slot // 2
-            minute_start = 30 if slot % 2 == 1 else 0
-            minute_end = 59 if slot % 2 == 1 else 29
-            return f"{hour:02d}:{minute_start:02d}", f"{hour:02d}:{minute_end:02d}"
-
         # Price volatility
         variance = sum((p - avg_price) ** 2 for p in effective_prices) / len(
             effective_prices
@@ -449,8 +448,8 @@ class LooopDenkiApiClient:
                 minutes_until_next_cheap = (slot - current_slot) * 30
                 break
 
-        min_start, min_end = slot_to_start_end(min_slot)
-        max_start, max_end = slot_to_start_end(max_slot)
+        min_start, min_end = self._slot_to_start_end(min_slot)
+        max_start, max_end = self._slot_to_start_end(max_slot)
 
         return {
             "data_available": True,
@@ -494,6 +493,14 @@ class LooopDenkiApiClient:
             "today": price_data.get("1", {}),
             "tomorrow": price_data.get("2", {}),
         }
+
+    @staticmethod
+    def _slot_to_start_end(slot: int) -> tuple[str, str]:
+        """Convert a 0-based 30-minute slot index to (start, end) 'HH:MM' strings."""
+        hour = slot // 2
+        minute_start = 30 if slot % 2 == 1 else 0
+        minute_end = 59 if slot % 2 == 1 else 29
+        return f"{hour:02d}:{minute_start:02d}", f"{hour:02d}:{minute_end:02d}"
 
     def _get_price_status(self, level: float | None, price: float | None) -> str:
         """

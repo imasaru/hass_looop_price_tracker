@@ -108,6 +108,8 @@ async def test_sensor_state(hass: HomeAssistant, mock_api_data: dict[str, Any]) 
                 "time_slot": 24,
                 "hour": 12,
                 "minute_range": "00-29",
+                "current_start_time": "12:00",
+                "current_end_time": "12:29",
             },
         ),
         patch(
@@ -116,6 +118,8 @@ async def test_sensor_state(hass: HomeAssistant, mock_api_data: dict[str, Any]) 
                 "next_price": 13.1,
                 "next_status": "でんき注意報",
                 "next_time_slot": 25,
+                "next_start_time": "12:30",
+                "next_end_time": "12:59",
             },
         ),
         patch(
@@ -146,6 +150,8 @@ async def test_sensor_state(hass: HomeAssistant, mock_api_data: dict[str, Any]) 
     assert current_state.attributes["time_slot"] == 24
     assert current_state.attributes["hour"] == 12
     assert current_state.attributes["minute_range"] == "00-29"
+    assert current_state.attributes["current_start_time"] == "12:00"
+    assert current_state.attributes["current_end_time"] == "12:29"
 
     # Test next price sensor
     next_state = hass.states.get("sensor.next_price")
@@ -153,6 +159,8 @@ async def test_sensor_state(hass: HomeAssistant, mock_api_data: dict[str, Any]) 
     assert next_state.state == "13.1"
     assert next_state.attributes["next_status"] == "でんき注意報"
     assert next_state.attributes["next_time_slot"] == 25
+    assert next_state.attributes["next_start_time"] == "12:30"
+    assert next_state.attributes["next_end_time"] == "12:59"
 
     # Test tomorrow average price sensor
     tomorrow_avg_state = hass.states.get("sensor.tomorrow_average_price")
