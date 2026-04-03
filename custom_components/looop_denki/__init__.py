@@ -11,7 +11,7 @@ from .api import LooopDenkiApiClient
 from .const import CONF_AREA_CODE
 from .coordinator import LooopDenkiCoordinator
 
-_PLATFORMS: list[Platform] = [Platform.SENSOR]
+_PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 type LooopDenkiConfigEntry = ConfigEntry[LooopDenkiCoordinator]
 

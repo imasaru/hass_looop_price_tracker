@@ -1,0 +1,377 @@
+blueprint:
+  name: "HVAC Overshoot Shutoff & Price-Aware Heating Policy"
+  description: >
+    Monitors a climate entity and implements two complementary features:
+
+    **1. Overshoot Shutoff with Hysteresis (Latch)**
+    Turns heating off when the room temperature significantly exceeds the
+    heating setpoint. Heating remains off (latched) until the temperature
+    falls back to within a configurable proximity of the setpoint AND the
+    minimum off-time has elapsed. This prevents the AC from idling at low
+    capacity in a well-insulated room — saving energy in accordance with
+    EN ISO 52120-1 Class B/A modulating control requirements.
+
+    **2. Price-Aware Heating Policy**
+    Accepts an optional binary sensor (e.g., the Looop Denki
+    `binary_sensor.<area>_price_alert` entity) as an inhibit signal.
+    When the inhibit signal is ON the automation applies the selected
+    policy: pause heating entirely, cap at an eco setpoint, or simply
+    skip any active-boost action.
+
+    Recommended defaults follow EN 16798-1 Category II comfort tolerances
+    and EN ISO 52120-1 Class B presence-based setback guidance.
+
+  domain: automation
+  source_url: https://github.com/imasaru/hass_looop_price_tracker
+
+  input:
+    climate_entity:
+      name: Climate Entity
+      description: The climate (thermostat / AC) entity to control.
+      selector:
+        entity:
+          domain: climate
+
+    # ── Overshoot shutoff ──────────────────────────────────────────────────
+    section_overshoot:
+      name: "Overshoot Shutoff"
+      icon: mdi:thermometer-alert
+      input:
+        overshoot_enabled:
+          name: Enable Overshoot Shutoff
+          description: >
+            Turn heating off when the room is significantly above the setpoint.
+            Keeps heating latched off until the temperature returns close to the
+            setpoint and the minimum off-time has passed.
+          default: true
+          selector:
+            boolean: {}
+
+        overshoot_threshold_k:
+          name: Overshoot Threshold (°C above setpoint)
+          description: >
+            Temperature rise above the heating setpoint that triggers shutoff.
+            EN 16798-1 Category II comfort band: ±1.0 °C. Recommended: 1.0–2.0 °C.
+          default: 1.5
+          selector:
+            number:
+              min: 0.5
+              max: 4.0
+              step: 0.5
+              unit_of_measurement: "°C"
+              mode: slider
+
+        release_threshold_k:
+          name: Release Threshold (°C below setpoint)
+          description: >
+            How close to the setpoint the temperature must fall before heating
+            is allowed to restart. Setting this to 0 re-enables heating as soon
+            as the room reaches the setpoint; a small positive value (0.5 °C)
+            provides additional hysteresis to avoid rapid cycling.
+          default: 0.5
+          selector:
+            number:
+              min: 0.0
+              max: 2.0
+              step: 0.5
+              unit_of_measurement: "°C"
+              mode: slider
+
+        minimum_off_minutes:
+          name: Minimum Off Time (minutes)
+          description: >
+            Minimum number of minutes heating must stay off after an overshoot
+            shutoff, even if the temperature has already dropped. Prevents
+            short-cycling the compressor. Recommended: 20–30 min.
+          default: 30
+          selector:
+            number:
+              min: 5
+              max: 120
+              step: 5
+              unit_of_measurement: min
+              mode: slider
+
+        heating_resume_mode:
+          name: Heating Resume Mode
+          description: HVAC mode to restore after the latch releases.
+          default: "heat"
+          selector:
+            select:
+              options:
+                - label: "heat"
+                  value: "heat"
+                - label: "heat_cool"
+                  value: "heat_cool"
+                - label: "auto"
+                  value: "auto"
+              custom_value: false
+
+    # ── Price-aware policy ─────────────────────────────────────────────────
+    section_price:
+      name: "Price-Aware Heating Policy"
+      icon: mdi:currency-jpy
+      input:
+        price_inhibit_entity:
+          name: Price Inhibit Entity (optional)
+          description: >
+            A binary sensor that, when ON, activates the price-aware policy.
+            Use `binary_sensor.<area>_price_alert` from the Looop Denki
+            integration, or any input_boolean / schedule entity.
+            Leave blank to disable this feature.
+          default: ""
+          selector:
+            entity: {}
+
+        price_policy:
+          name: Price-Aware Policy
+          description: >
+            Action to take while the inhibit entity is ON.
+
+            **pause_heating** — set HVAC to off (most aggressive; saves the most
+            energy; only activates when 'off' is in the climate's supported modes).
+
+            **force_eco** — reduce the setpoint to the configured eco temperature
+            instead of the comfort target.
+
+            **block_boost** — skip any setpoint increases but leave the HVAC
+            running at its current setpoint (least disruptive).
+          default: "pause_heating"
+          selector:
+            select:
+              options:
+                - label: "Pause Heating (HVAC Off)"
+                  value: "pause_heating"
+                - label: "Force Eco Setpoint"
+                  value: "force_eco"
+                - label: "Block Boost (maintain only)"
+                  value: "block_boost"
+              custom_value: false
+
+        eco_setpoint:
+          name: Eco Setpoint (°C)
+          description: >
+            Setpoint applied when the "Force Eco" policy is active. Should be
+            lower than your normal comfort temperature. Typical range: 16–20 °C.
+          default: 18.0
+          selector:
+            number:
+              min: 14.0
+              max: 24.0
+              step: 0.5
+              unit_of_measurement: "°C"
+              mode: slider
+
+    # ── Logging ────────────────────────────────────────────────────────────
+    section_logging:
+      name: "Logging"
+      icon: mdi:text-box-outline
+      collapsed: true
+      input:
+        enable_logging:
+          name: Enable Logbook Logging
+          description: Write diagnostic messages to the HA Logbook.
+          default: false
+          selector:
+            boolean: {}
+
+# ── Variables ──────────────────────────────────────────────────────────────
+variables:
+  v_climate: !input climate_entity
+  v_overshoot_enabled: !input overshoot_enabled
+  v_overshoot_k: !input overshoot_threshold_k
+  v_release_k: !input release_threshold_k
+  v_min_off_min: !input minimum_off_minutes
+  v_resume_mode: !input heating_resume_mode
+  v_inhibit_entity: !input price_inhibit_entity
+  v_price_policy: !input price_policy
+  v_eco_setpoint: !input eco_setpoint
+  v_logging: !input enable_logging
+
+# ── Triggers ───────────────────────────────────────────────────────────────
+trigger:
+  # Periodic check — main evaluation cadence
+  - platform: time_pattern
+    minutes: "/5"
+    id: periodic
+
+  # React quickly to temperature changes
+  - platform: state
+    entity_id: !input climate_entity
+    attribute: current_temperature
+    id: temp_change
+
+  # React to inhibit signal changes
+  - platform: state
+    entity_id: !input price_inhibit_entity
+    id: inhibit_change
+
+condition: []
+
+# ── Actions ────────────────────────────────────────────────────────────────
+action:
+  # ── Compute shared state variables ──────────────────────────────────────
+  - variables:
+      current_temp: >
+        {{ state_attr(v_climate, 'current_temperature') | float(none) }}
+      setpoint: >
+        {{ state_attr(v_climate, 'temperature') | float(none) }}
+      hvac_state: >
+        {{ states(v_climate) }}
+      hvac_modes: >
+        {{ state_attr(v_climate, 'hvac_modes') | default([]) }}
+      price_inhibit_active: >
+        {{ v_inhibit_entity not in ['', none, []]
+           and is_state(v_inhibit_entity, 'on') }}
+      in_heating: >
+        {{ hvac_state not in ['off', 'cool', 'fan_only', 'dry'] }}
+      overshoot_detected: >
+        {{ (v_overshoot_enabled | bool(false))
+           and current_temp is not none
+           and setpoint is not none
+           and in_heating
+           and (current_temp - setpoint) > (v_overshoot_k | float(1.5)) }}
+      latch_should_release: >
+        {{ hvac_state == 'off'
+           and current_temp is not none
+           and setpoint is not none
+           and current_temp <= (setpoint - (v_release_k | float(0.5)))
+           and (now() - states[v_climate].last_changed).total_seconds()
+               >= (v_min_off_min | int(30)) * 60 }}
+
+  # ── 1. Price-aware policy (evaluated first) ──────────────────────────────
+  - choose:
+      # pause_heating: cut power entirely when price inhibit is active
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ price_inhibit_active
+                 and v_price_policy == 'pause_heating'
+                 and hvac_state != 'off'
+                 and 'off' in hvac_modes }}
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ v_logging | bool(false) }}"
+            then:
+              - action: logbook.log
+                data:
+                  name: "Looop Denki HVAC Policy"
+                  message: >
+                    Price Inhibit (pause_heating): electricity price is elevated.
+                    Setting HVAC off.
+                  entity_id: !input climate_entity
+          - action: climate.set_hvac_mode
+            target:
+              entity_id: !input climate_entity
+            data:
+              hvac_mode: "off"
+          - stop: "Price inhibit: pause_heating applied"
+
+      # force_eco: lower the setpoint to the eco temperature
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ price_inhibit_active
+                 and v_price_policy == 'force_eco'
+                 and in_heating
+                 and setpoint is not none
+                 and (setpoint - (v_eco_setpoint | float(18.0))) > 0.1 }}
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ v_logging | bool(false) }}"
+            then:
+              - action: logbook.log
+                data:
+                  name: "Looop Denki HVAC Policy"
+                  message: >
+                    Price Inhibit (force_eco): electricity price is elevated.
+                    Reducing setpoint from {{ setpoint }}°C to
+                    {{ v_eco_setpoint }}°C.
+                  entity_id: !input climate_entity
+          - action: climate.set_temperature
+            target:
+              entity_id: !input climate_entity
+            data:
+              temperature: "{{ v_eco_setpoint | float | round(1) }}"
+          - stop: "Price inhibit: force_eco applied"
+
+      # block_boost: inhibit is active but policy is block_boost — no action
+      # here; downstream automations that call set_temperature should check
+      # this binary sensor before boosting.  We stop so the overshoot logic
+      # does not fight the policy.
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ price_inhibit_active and v_price_policy == 'block_boost' }}
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ v_logging | bool(false) }}"
+            then:
+              - action: logbook.log
+                data:
+                  name: "Looop Denki HVAC Policy"
+                  message: >
+                    Price Inhibit (block_boost): electricity price is elevated.
+                    Heating maintained at current setpoint; boosts blocked.
+                  entity_id: !input climate_entity
+          - stop: "Price inhibit: block_boost noted"
+
+  # ── 2. Overshoot shutoff (latch set) ────────────────────────────────────
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ overshoot_detected and 'off' in hvac_modes }}
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ v_logging | bool(false) }}"
+            then:
+              - action: logbook.log
+                data:
+                  name: "Looop Denki HVAC Policy"
+                  message: >
+                    Overshoot Shutoff: {{ current_temp }}°C is
+                    {{ (current_temp - setpoint) | round(1) }}°C above setpoint
+                    {{ setpoint }}°C (threshold {{ v_overshoot_k }}°C).
+                    HVAC set to off. Will re-enable after temperature drops to
+                    {{ (setpoint - v_release_k) | round(1) }}°C and
+                    {{ v_min_off_min }} min have elapsed.
+                  entity_id: !input climate_entity
+          - action: climate.set_hvac_mode
+            target:
+              entity_id: !input climate_entity
+            data:
+              hvac_mode: "off"
+          - stop: "Overshoot shutoff applied"
+
+  # ── 3. Overshoot latch release ───────────────────────────────────────────
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ latch_should_release
+                 and not price_inhibit_active
+                 and v_resume_mode in hvac_modes }}
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ v_logging | bool(false) }}"
+            then:
+              - action: logbook.log
+                data:
+                  name: "Looop Denki HVAC Policy"
+                  message: >
+                    Overshoot Latch Release: {{ current_temp }}°C has returned
+                    to within {{ v_release_k }}°C below setpoint {{ setpoint }}°C
+                    and minimum off-time ({{ v_min_off_min }} min) has elapsed.
+                    Resuming heating ({{ v_resume_mode }}).
+                  entity_id: !input climate_entity
+          - action: climate.set_hvac_mode
+            target:
+              entity_id: !input climate_entity
+            data:
+              hvac_mode: "{{ v_resume_mode }}"

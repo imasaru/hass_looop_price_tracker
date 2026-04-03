@@ -18,6 +18,14 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "cheap_now": {
+        "name": "でんき日和"
+      },
+      "price_alert": {
+        "name": "でんき注意・警報"
+      }
+    },
     "sensor": {
       "current_price": {
         "name": "現在の電力料金"

@@ -18,6 +18,14 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "cheap_now": {
+        "name": "Cheap Now"
+      },
+      "price_alert": {
+        "name": "Price Alert"
+      }
+    },
     "sensor": {
       "current_price": {
         "name": "Current Power Price"
