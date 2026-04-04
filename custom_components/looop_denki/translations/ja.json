@@ -48,6 +48,9 @@
       },
       "expensive_hours_today": {
         "name": "今日の高い時間帯"
+      },
+      "price_forecast": {
+        "name": "電力料金グラフデータ"
       }
     }
   }

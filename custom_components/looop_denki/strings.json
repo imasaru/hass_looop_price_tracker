@@ -48,6 +48,9 @@
       },
       "expensive_hours_today": {
         "name": "Expensive Hours Today"
+      },
+      "price_forecast": {
+        "name": "Price Forecast Graph Data"
       }
     }
   }

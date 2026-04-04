@@ -49,6 +49,11 @@ def mock_api_data() -> dict[str, Any]:
                 for i in range(48)
             },  # 1-based indexing
         },
+        "timelist": [
+            f"{h}:{m:02d}~{h}:{m + 29:02d}"
+            for h in range(24)
+            for m in (0, 30)
+        ],
     }
 
 
@@ -395,3 +400,84 @@ async def test_expensive_hours_today_sensor_no_expensive_slots(
     assert attrs["expensive_times"] == []
     assert attrs["first_expensive_slot"] is None
     assert attrs["first_expensive_time"] is None
+
+
+async def test_price_forecast_sensor(
+    hass: HomeAssistant, mock_api_data: dict[str, Any]
+) -> None:
+    """Test price_forecast sensor exposes graph arrays for today and tomorrow."""
+    with patch(
+        "custom_components.looop_denki.api.LooopDenkiApiClient.async_get_prices",
+        return_value=mock_api_data,
+    ):
+        await setup_integration(hass)
+
+    state = hass.states.get("sensor.price_forecast")
+    assert state is not None
+    assert state.state == "48"
+
+    attrs = state.attributes
+
+    # today_prices: effective prices from today's text (1-based) or price_data
+    assert "all_prices" in attrs
+    assert len(attrs["all_prices"]) == 48
+    assert attrs["all_prices"][0] == 10.5
+
+    # today_levels: raw level array from today's data (key "1")
+    assert "today_levels" in attrs
+    assert len(attrs["today_levels"]) == 48
+    assert attrs["today_levels"][0] == 0
+    assert attrs["today_levels"][1] == -0.5
+
+    # tomorrow_prices: price_data array from tomorrow's data (key "2")
+    assert "tomorrow_prices" in attrs
+    assert len(attrs["tomorrow_prices"]) == 48
+    assert attrs["tomorrow_prices"][0] == 11.2
+
+    # tomorrow_levels: level array from tomorrow's data (key "2")
+    assert "tomorrow_levels" in attrs
+    assert len(attrs["tomorrow_levels"]) == 48
+    assert attrs["tomorrow_levels"][1] == -0.5
+
+    # timelist: 48 time-label strings from mock data
+    assert "timelist" in attrs
+    assert len(attrs["timelist"]) == 48
+    assert attrs["timelist"][0] == "0:00~0:29"
+    assert attrs["timelist"][1] == "0:30~0:59"
+
+
+async def test_price_forecast_sensor_unavailable_without_today_data(
+    hass: HomeAssistant,
+) -> None:
+    """Test price_forecast sensor is unavailable when today's data is missing."""
+    api_data_without_today = {
+        "0": {
+            "price_data": [10.0] * 48,
+            "level": [0] * 48,
+            "text": {str(i + 1): {"price": 10.0, "level": 0} for i in range(48)},
+        },
+        # key "1" (today) deliberately missing
+    }
+    with (
+        patch(
+            "custom_components.looop_denki.api.LooopDenkiApiClient.async_get_prices",
+            return_value=api_data_without_today,
+        ),
+        patch(
+            "custom_components.looop_denki.api.LooopDenkiApiClient.get_current_price_info",
+            return_value={},
+        ),
+        patch(
+            "custom_components.looop_denki.api.LooopDenkiApiClient.get_next_price_info",
+            return_value={},
+        ),
+        patch(
+            "custom_components.looop_denki.api.LooopDenkiApiClient.get_tomorrow_forecast_info",
+            return_value={},
+        ),
+    ):
+        await setup_integration(hass)
+
+    state = hass.states.get("sensor.price_forecast")
+    assert state is not None
+    assert state.state == STATE_UNAVAILABLE
