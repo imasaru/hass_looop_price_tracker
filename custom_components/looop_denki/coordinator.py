@@ -39,6 +39,14 @@ class LooopDenkiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             today_stats = self.client.get_today_stats(raw_data)
             historical_data = self.client.get_historical_data(raw_data)
 
+            forecast_graph = {
+                "today_prices": today_stats.get("all_prices"),
+                "today_levels": raw_data.get("1", {}).get("level"),
+                "tomorrow_prices": raw_data.get("2", {}).get("price_data"),
+                "tomorrow_levels": raw_data.get("2", {}).get("level"),
+                "timelist": raw_data.get("timelist"),
+            }
+
             return {
                 "raw_data": raw_data,
                 "current_info": current_info,
@@ -46,6 +54,7 @@ class LooopDenkiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "tomorrow_info": tomorrow_info,
                 "today_stats": today_stats,
                 "historical_data": historical_data,
+                "forecast_graph": forecast_graph,
             }
         except LooopDenkiApiError as err:
             raise UpdateFailed(

@@ -42,7 +42,9 @@ from .const import (
     ATTR_STATUS,
     ATTR_STD_DEV,
     ATTR_TIME_SLOT,
+    ATTR_TIMELIST,
     ATTR_TODAY_ALL_PRICES,
+    ATTR_TODAY_LEVELS,
     ATTR_TODAY_MAX_SLOT,
     ATTR_TODAY_MAX_TIME,
     ATTR_TODAY_MAX_TIME_END,
@@ -51,10 +53,12 @@ from .const import (
     ATTR_TODAY_MIN_TIME,
     ATTR_TODAY_MIN_TIME_END,
     ATTR_TODAY_MIN_TIME_START,
+    ATTR_TOMORROW_LEVELS,
     ATTR_TOMORROW_MAX_TIME_END,
     ATTR_TOMORROW_MAX_TIME_START,
     ATTR_TOMORROW_MIN_TIME_END,
     ATTR_TOMORROW_MIN_TIME_START,
+    ATTR_TOMORROW_PRICES,
     DOMAIN,
 )
 from .coordinator import LooopDenkiCoordinator
@@ -361,6 +365,44 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
             else None
         ),
     ),
+    LooopDenkiSensorEntityDescription(
+        key="price_forecast",
+        translation_key="price_forecast",
+        name="Price Forecast",
+        device_class=None,
+        state_class=None,
+        native_unit_of_measurement=None,
+        value_fn=lambda sensor: (
+            len(
+                sensor.coordinator.data.get("forecast_graph", {}).get("today_prices")
+                or []
+            )
+            or None
+            if sensor.coordinator.data
+            else None
+        ),
+        extra_fn=lambda sensor: (
+            {
+                ATTR_TODAY_ALL_PRICES: sensor.coordinator.data.get(
+                    "forecast_graph", {}
+                ).get("today_prices"),
+                ATTR_TODAY_LEVELS: sensor.coordinator.data.get(
+                    "forecast_graph", {}
+                ).get("today_levels"),
+                ATTR_TOMORROW_PRICES: sensor.coordinator.data.get(
+                    "forecast_graph", {}
+                ).get("tomorrow_prices"),
+                ATTR_TOMORROW_LEVELS: sensor.coordinator.data.get(
+                    "forecast_graph", {}
+                ).get("tomorrow_levels"),
+                ATTR_TIMELIST: sensor.coordinator.data.get(
+                    "forecast_graph", {}
+                ).get("timelist"),
+            }
+            if sensor.coordinator.data and sensor.coordinator.data.get("forecast_graph")
+            else None
+        ),
+    ),
 )
 
 
@@ -470,5 +512,8 @@ class LooopDenkiSensor(CoordinatorEntity[LooopDenkiCoordinator], SensorEntity):
         }:
             today_stats = self.coordinator.data.get("today_stats", {})
             return today_stats.get("data_available", False)
+        if self.entity_description.key == "price_forecast":
+            forecast_graph = self.coordinator.data.get("forecast_graph", {})
+            return bool(forecast_graph.get("today_prices"))
 
         return True

@@ -56,3 +56,9 @@ ATTR_EXPENSIVE_COUNT = "expensive_count"
 ATTR_EXPENSIVE_THRESHOLD = "threshold_used"
 ATTR_FIRST_EXPENSIVE_SLOT = "first_expensive_slot"
 ATTR_FIRST_EXPENSIVE_TIME = "first_expensive_time"
+
+# Sensor attributes – price forecast graph
+ATTR_TODAY_LEVELS = "today_levels"
+ATTR_TOMORROW_PRICES = "tomorrow_prices"
+ATTR_TOMORROW_LEVELS = "tomorrow_levels"
+ATTR_TIMELIST = "timelist"
