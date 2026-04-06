@@ -254,10 +254,11 @@ async def test_today_stats_sensors(
         await setup_integration(hass)
 
     # Expected values from mock data: prices [10.5, 12.3, 8.7, 15.2] * 12
+    # levels [0, -0.5, 0, 0.5] * 12 (from text dict)
     # avg = (10.5+12.3+8.7+15.2)/4 = 11.675
-    # min = 8.7, max = 15.2
-    # threshold = 11.675 * 0.9 ≈ 10.51  → cheapest slots where price < 10.51 → only 8.7
-    # cheapest slots (0-based): 2,6,10,14,18,22,26,30,34,38,42,46 → 12 slots
+    # min = 8.7 (slot 2), max = 15.2 (slot 3)
+    # cheapest (level < 0): slots 1,5,9,…,45 → 12 slots (price 12.3)
+    # expensive (level > 0): slots 3,7,11,…,47 → 12 slots (price 15.2)
 
     today_avg_state = hass.states.get("sensor.today_average_price")
     assert today_avg_state is not None
@@ -286,8 +287,10 @@ async def test_today_stats_sensors(
     assert cheapest_state.state == "12"
     attrs = cheapest_state.attributes
     assert attrs["cheapest_count"] == 12
-    assert 2 in attrs["cheapest_slots"]
-    assert "1:00~1:29" in attrs["cheapest_times"]
+    # Level-based: cheapest slots are where level < 0 (slot 1 in each 4-slot cycle)
+    assert 1 in attrs["cheapest_slots"]
+    assert "0:30~0:59" in attrs["cheapest_times"]
+    assert attrs["threshold_used"] == "でんき日和"
     assert attrs["avg_price"] == 11.67
     assert "std_dev" in attrs
     assert "price_range" in attrs
@@ -350,9 +353,8 @@ async def test_expensive_hours_today_sensor(
 
     # Expected values from mock data: prices [10.5, 12.3, 8.7, 15.2] * 12 (48 total)
     # Pattern repeats 12×, so avg = (10.5+12.3+8.7+15.2)/4 = 11.675 → rounded to 11.67
-    # expensive_threshold = 11.675 * 1.1 = 12.8425 → rounded to 12.84
-    # expensive slots (0-based): indices where price >= 12.84 → only 15.2 qualifies
-    # 15.2 appears at slots 3,7,11,15,19,23,27,31,35,39,43,47 → 12 slots
+    # Level-based: expensive slots are where level > 0 (level=0.5 at slot 3 each cycle)
+    # expensive slots (0-based): 3,7,11,15,19,23,27,31,35,39,43,47 → 12 slots
 
     expensive_state = hass.states.get("sensor.expensive_hours_today")
     assert expensive_state is not None
@@ -363,7 +365,7 @@ async def test_expensive_hours_today_sensor(
     assert 3 in attrs["expensive_slots"]
     assert "1:30~1:59" in attrs["expensive_times"]
     assert attrs["avg_price"] == 11.67
-    assert attrs["threshold_used"] == 12.84
+    assert attrs["threshold_used"] == "でんき注意報/警報"
     assert attrs["first_expensive_slot"] == 3
     assert attrs["first_expensive_time"] == "1:30~1:59"
 
@@ -400,6 +402,49 @@ async def test_expensive_hours_today_sensor_no_expensive_slots(
     assert attrs["expensive_times"] == []
     assert attrs["first_expensive_slot"] is None
     assert attrs["first_expensive_time"] is None
+
+
+async def test_today_stats_sensors_fallback_without_level_data(
+    hass: HomeAssistant,
+) -> None:
+    """Test cheapest/expensive falls back to avg ±10% when level data is absent."""
+    api_data_without_levels = {
+        "1": {
+            # No "level" key and no level values in text → statistical fallback
+            "price_data": [10.5, 12.3, 8.7, 15.2] * 12,
+            "text": {},
+        },
+        "timelist": [
+            f"{h}:{m:02d}~{h}:{m + 29:02d}" for h in range(24) for m in (0, 30)
+        ],
+    }
+    with patch(
+        "custom_components.looop_denki.api.LooopDenkiApiClient.async_get_prices",
+        return_value=api_data_without_levels,
+    ):
+        await setup_integration(hass)
+
+    # avg = (10.5+12.3+8.7+15.2)/4 ≈ 11.675 → round to 11.67
+    # cheapest_criteria = round(11.67 * 0.9, 2) = 10.5
+    # expensive_criteria = round(11.67 * 1.1, 2) = 12.84
+
+    cheapest_state = hass.states.get("sensor.cheapest_hours_today")
+    assert cheapest_state is not None
+    assert cheapest_state.state == "12"
+    cheap_attrs = cheapest_state.attributes
+    assert cheap_attrs["cheapest_count"] == 12
+    assert 2 in cheap_attrs["cheapest_slots"]  # price 8.7 at slot 2
+    assert "1:00~1:29" in cheap_attrs["cheapest_times"]
+    assert cheap_attrs["threshold_used"] == 10.5  # numeric fallback threshold
+
+    expensive_state = hass.states.get("sensor.expensive_hours_today")
+    assert expensive_state is not None
+    assert expensive_state.state == "12"
+    exp_attrs = expensive_state.attributes
+    assert exp_attrs["expensive_count"] == 12
+    assert 3 in exp_attrs["expensive_slots"]  # price 15.2 at slot 3
+    assert "1:30~1:59" in exp_attrs["expensive_times"]
+    assert exp_attrs["threshold_used"] == 12.84  # numeric fallback threshold
 
 
 async def test_price_forecast_sensor(
