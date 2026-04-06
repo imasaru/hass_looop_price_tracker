@@ -386,26 +386,42 @@ class LooopDenkiApiClient:
             return {}
 
         price_list = today_data.get("price_data", [])
+        level_list = today_data.get("level", [])
         text_dict = today_data.get("text", {})
         timelist = price_data.get("timelist", [])
 
         if not isinstance(price_list, list) or not price_list:
             return {}
 
-        # Build effective prices (text-based when available, else price_data)
+        # Build effective prices and levels (text-based when available, else raw lists)
         effective_prices: list[float] = []
+        effective_levels: list[float | None] = []
         for i in range(len(price_list)):
             text_slot_key = str(i + 1)  # text dict is 1-based
+            text_price = None
+            text_level = None
             if (
                 isinstance(text_dict, dict)
                 and text_slot_key in text_dict
                 and isinstance(text_dict[text_slot_key], dict)
             ):
                 text_price = text_dict[text_slot_key].get("price")
-                if text_price is not None:
-                    effective_prices.append(float(text_price))
-                    continue
-            effective_prices.append(float(price_list[i]))
+                raw_level = text_dict[text_slot_key].get("level")
+                if raw_level is not None:
+                    text_level = float(raw_level)
+            effective_prices.append(
+                float(text_price) if text_price is not None else float(price_list[i])
+            )
+            if text_level is not None:
+                effective_levels.append(text_level)
+            elif (
+                isinstance(level_list, list)
+                and i < len(level_list)
+                and level_list[i] is not None
+            ):
+                effective_levels.append(float(level_list[i]))
+            else:
+                effective_levels.append(None)
 
         if not effective_prices:
             return {}
@@ -432,9 +448,19 @@ class LooopDenkiApiClient:
         std_dev = round(math.sqrt(variance), 2)
         price_range = round(max_price - min_price, 2)
 
-        # Cheapest hours: slots whose price is below (average - 10%)
-        threshold = round(avg_price * 0.9, 2)
-        cheapest_slots = [i for i, p in enumerate(effective_prices) if p < threshold]
+        # Cheapest hours: でんき日和 slots (level < 0). Fall back to avg - 10% when
+        # level data is unavailable.
+        has_level_data = any(lv is not None for lv in effective_levels)
+        if has_level_data:
+            cheapest_slots = [
+                i for i, lv in enumerate(effective_levels) if lv is not None and lv < 0
+            ]
+            threshold: float | str = "でんき日和"
+        else:
+            threshold = round(avg_price * 0.9, 2)
+            cheapest_slots = [
+                i for i, p in enumerate(effective_prices) if p < threshold
+            ]
         cheapest_times = [slot_to_time(s) for s in cheapest_slots]
 
         # Minutes until the next upcoming cheap slot
@@ -448,11 +474,21 @@ class LooopDenkiApiClient:
                 minutes_until_next_cheap = (slot - current_slot) * 30
                 break
 
-        # Expensive hours: slots at or above 110% of the average (avg × 1.1)
-        expensive_threshold = round(avg_price * 1.1, 2)
-        expensive_slots = [
-            i for i, p in enumerate(effective_prices) if p >= expensive_threshold
-        ]
+        # Expensive hours: でんき注意報/警報 slots (level > 0, or price ≥ 100).
+        # Fall back to avg + 10% when level data is unavailable.
+        if has_level_data:
+            pairs = zip(effective_prices, effective_levels, strict=True)
+            expensive_slots = [
+                i
+                for i, (p, lv) in enumerate(pairs)
+                if (lv is not None and lv > 0) or p >= 100
+            ]
+            expensive_threshold: float | str = "でんき注意報/警報"
+        else:
+            expensive_threshold = round(avg_price * 1.1, 2)
+            expensive_slots = [
+                i for i, p in enumerate(effective_prices) if p >= expensive_threshold
+            ]
         expensive_times = [slot_to_time(s) for s in expensive_slots]
 
         first_expensive_slot: int | None = (
