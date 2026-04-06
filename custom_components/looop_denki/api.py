@@ -455,11 +455,11 @@ class LooopDenkiApiClient:
             cheapest_slots = [
                 i for i, lv in enumerate(effective_levels) if lv is not None and lv < 0
             ]
-            threshold: float | str = "でんき日和"
+            cheapest_criteria: float | str = "でんき日和"
         else:
-            threshold = round(avg_price * 0.9, 2)
+            cheapest_criteria = round(avg_price * 0.9, 2)
             cheapest_slots = [
-                i for i, p in enumerate(effective_prices) if p < threshold
+                i for i, p in enumerate(effective_prices) if p < cheapest_criteria
             ]
         cheapest_times = [slot_to_time(s) for s in cheapest_slots]
 
@@ -483,11 +483,11 @@ class LooopDenkiApiClient:
                 for i, (p, lv) in enumerate(pairs)
                 if (lv is not None and lv > 0) or p >= 100
             ]
-            expensive_threshold: float | str = "でんき注意報/警報"
+            expensive_criteria: float | str = "でんき注意報/警報"
         else:
-            expensive_threshold = round(avg_price * 1.1, 2)
+            expensive_criteria = round(avg_price * 1.1, 2)
             expensive_slots = [
-                i for i, p in enumerate(effective_prices) if p >= expensive_threshold
+                i for i, p in enumerate(effective_prices) if p >= expensive_criteria
             ]
         expensive_times = [slot_to_time(s) for s in expensive_slots]
 
@@ -520,7 +520,7 @@ class LooopDenkiApiClient:
             "cheapest_slots": cheapest_slots,
             "cheapest_times": cheapest_times,
             "cheapest_count": len(cheapest_slots),
-            "cheapest_threshold": threshold,
+            "cheapest_threshold": cheapest_criteria,
             "avg_price": avg_price,
             "minutes_until_next_cheap": minutes_until_next_cheap,
             "std_dev": std_dev,
@@ -528,7 +528,7 @@ class LooopDenkiApiClient:
             "expensive_slots": expensive_slots,
             "expensive_times": expensive_times,
             "expensive_count": len(expensive_slots),
-            "expensive_threshold": expensive_threshold,
+            "expensive_threshold": expensive_criteria,
             "first_expensive_slot": first_expensive_slot,
             "first_expensive_time": first_expensive_time,
         }
