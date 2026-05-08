@@ -78,7 +78,7 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
         translation_key="current_price",
         name="Current Price",
         device_class=SensorDeviceClass.MONETARY,
-        state_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="円/kWh",
         value_fn=lambda sensor: (
             sensor.coordinator.data.get("current_info", {}).get("current_price")
@@ -91,7 +91,7 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
         translation_key="next_price",
         name="Next Price",
         device_class=SensorDeviceClass.MONETARY,
-        state_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="円/kWh",
         value_fn=lambda sensor: (
             sensor.coordinator.data.get("next_info", {}).get("next_price")
@@ -125,7 +125,7 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
         translation_key="tomorrow_average_price",
         name="Tomorrow Average Price",
         device_class=SensorDeviceClass.MONETARY,
-        state_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="円/kWh",
         value_fn=lambda sensor: (
             sensor.coordinator.data.get("tomorrow_info", {}).get("tomorrow_average")
@@ -147,7 +147,7 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
         translation_key="tomorrow_min_price",
         name="Tomorrow Minimum Price",
         device_class=SensorDeviceClass.MONETARY,
-        state_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="円/kWh",
         value_fn=lambda sensor: (
             sensor.coordinator.data.get("tomorrow_info", {}).get("tomorrow_min")
@@ -175,7 +175,7 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
         translation_key="tomorrow_max_price",
         name="Tomorrow Maximum Price",
         device_class=SensorDeviceClass.MONETARY,
-        state_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="円/kWh",
         value_fn=lambda sensor: (
             sensor.coordinator.data.get("tomorrow_info", {}).get("tomorrow_max")
@@ -203,7 +203,7 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
         translation_key="today_average_price",
         name="Today Average Price",
         device_class=SensorDeviceClass.MONETARY,
-        state_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="円/kWh",
         value_fn=lambda sensor: (
             sensor.coordinator.data.get("today_stats", {}).get("today_average")
@@ -225,7 +225,7 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
         translation_key="today_min_price",
         name="Today Minimum Price",
         device_class=SensorDeviceClass.MONETARY,
-        state_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="円/kWh",
         value_fn=lambda sensor: (
             sensor.coordinator.data.get("today_stats", {}).get("today_min")
@@ -256,7 +256,7 @@ SENSOR_TYPES: tuple[LooopDenkiSensorEntityDescription, ...] = (
         translation_key="today_max_price",
         name="Today Maximum Price",
         device_class=SensorDeviceClass.MONETARY,
-        state_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="円/kWh",
         value_fn=lambda sensor: (
             sensor.coordinator.data.get("today_stats", {}).get("today_max")
